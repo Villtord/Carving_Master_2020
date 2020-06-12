@@ -22,7 +22,7 @@ import logging
 
 
 class CarvingControlDriver(PyQt5.QtCore.QThread):
-    new_value_signal = PyQt5.QtCore.pyqtSignal('QString')
+    positions_signal = PyQt5.QtCore.pyqtSignal('QString')
 
     def __init__(self, host, port, **kwargs):
         """Initialize TCP connection and get the control ready
@@ -89,10 +89,10 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                             print("{req,'MCU8',get_state}. failed")
                             local_reply = ""
                             pass
-
+        # self.start_timer()
     def start_timer(self):
         """Every self.timing [ms] checking connection with server and trying to get positions"""
-        self.timing = 1000
+        self.timing = 2000
         self.timer_x = PyQt5.QtCore.QTimer(self)
         self.timer_x.timeout.connect(self.get_position)
         self.timer_x.start(self.timing)
@@ -104,26 +104,31 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
 
     def get_position(self):
         """ Get axis positions from MCU8 """
-        self.send_command("{req,'MCU8',get_position}.\r\n")
+        positions = self.send_command("{req,'MCU8',get_position}.\r\n")
+        # positions = "{'MCU8',{ok,[{axis_pos,0,8.000244140625},{axis_pos,1,-7.999755859375},{axis_pos,2,202.00006103515625},{axis_pos,3,-130.00079013677276},{axis_pos,4,0.0},{axis_pos,5,0.0}]}}"
+        self.positions_signal.emit(positions)
 
     @property
     def get_state(self):
         """Get manipulator state: idle or busy"""
-        self.carving_state = [False if "idle" in self.send_command("{req,'MCU8',get_state}.\r\n") else True]
-        return self.carving_state
+        carving_state = [False if "idle" in self.send_command("{req,'MCU8',get_state}.\r\n") else True]
+        return carving_state
 
-    def set_position(self, axis, position):
+    def set_position(self, position):
         """
-        :type axis, position: list
+        :type position: list
+        position is a list of 6 values separated by , . No value means no command to move this axis.
         """
-        self.axis = axis
+        self.timer_x.stop()
         self.position = position
-        final_command = ""
+        print (self.position)
         new_command = "{req,'MCU8',{set_position,["
-        for i in range(len(axis)):
-            new_command += "{axis_pos,"+f'{self.axis[i]},{self.position[i]}'+"},"
+        for i in range(len(position)):
+            if position[i] != None:
+                new_command += "{axis_pos,"+f'{i},{self.position[i]}'+"},"
         final_command = new_command[:-1]+"]}}.\r\n"
         self.send_command(final_command)
+        self.timer_x.start(self.timing)
 
     def send_command(self, command):
         """ Ask server and receive reply """
@@ -139,7 +144,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
             if ready[0]:
                 self.send_reply = self.mySocket.recv(200).decode()
             else:
-                print ("no reply from server")
+                print ("no send reply from server")
                 self.send_reply = ""
             loop_flag = True
             while loop_flag:
@@ -148,17 +153,17 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                 if ready[0]:
                     self.wait_reply = self.mySocket.recv(1000).decode()
                 else:
-                    print ("no reply from server")
+                    print ("no wait reply from server")
                     self.wait_reply = ""
                     loop_flag = False
             self.reply = self.send_reply + self.wait_reply
+            print (self.reply)
         except Exception as e:
             logging.exception(e)
             self.reply = ""
             print('error sending/receiving a command from manipulator server')
             self.connection_flag = False
             pass
-        self.new_value_signal.emit(self.reply)
         return self.reply
 
     def close(self):

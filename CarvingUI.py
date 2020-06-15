@@ -29,20 +29,29 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
                 self.predefined_buttons_names_tuple = (" ARPES ", " SCREW ", " EXCH ", " FREE ", " STOP ")
                 self.predefined_buttons_objects_dict = {" ARPES ":QPushButtonObject," SCREW ":QPushButtonObject},..."""
 
-        self.predefined_positions_dict = {self.predefined_buttons_names_tuple[0]:(0.0, 0.0, 0.0, 0.0, 90.0, 0.0),
-                                          self.predefined_buttons_names_tuple[1]:(0.0, 0.0, 215.0, -45.0, 0.0, 0.0),
-                                          self.predefined_buttons_names_tuple[2]:(0.0, 0.0, 202.0, -130.0, 0.0, -17.0),
-                                          self.predefined_buttons_names_tuple[3]:(8.0, -8.0, 202.0, -130.0, 0.0, 0.0)}
+        self.predefined_positions_dict = {self.predefined_buttons_names_tuple[0]: (0.0, 0.0, 0.0, 0.0, 90.0, 0.0),
+                                          self.predefined_buttons_names_tuple[1]: (0.0, 0.0, 215.0, -45.0, 0.0, 0.0),
+                                          self.predefined_buttons_names_tuple[2]: (0.0, 0.0, 202.0, -130.0, 0.0, -17.0),
+                                          self.predefined_buttons_names_tuple[3]: (8.0, -8.0, 202.0, -130.0, 0.0, 0.0)}
 
         """Connect signals and slots from predefined buttons/labels"""
-        for i in range(len(self.predefined_buttons_names_tuple)-1):
+        for i in range(len(self.predefined_buttons_names_tuple) - 1):
             position_name = self.predefined_buttons_names_tuple[i]
             """direct construction of lambda with argument and extra 
             variable a - otherwise b results in False/True??? """
-            self.predefined_buttons_objects_dict[position_name].clicked.connect(lambda a,b=self.predefined_positions_dict[position_name]: self.MyCarving.set_position(b))
+            self.predefined_buttons_objects_dict[position_name].clicked.connect(
+                lambda a, b=self.predefined_positions_dict[position_name]: self.MyCarving.set_position(b))
+
+        """Connect signals and slots from abs move axis buttons - moves only one axis where return was pressed!"""
+        for axis_name in self.axes_names_tuple:
+            """direct construction of lambda with argument and extra 
+            variable a - otherwise b results in False/True??? """
+            self.axes_objects_dict[axis_name][2].returnPressed.connect(
+                lambda a, b=axis_name: self.MyCarving.move_axis_abs(b))
 
         """ Connect stop button """
-        self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].clicked.connect(lambda: self.MyCarving.stop_manipulator())
+        self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].clicked.connect(
+            lambda: self.MyCarving.stop_manipulator())
 
         """ Make a separate thread to monitor/control Carving """
         self.MyCarving = CarvingControlDriver("localhost", 40002)
@@ -59,7 +68,8 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
             print(self.axes_positions)
             for i in range(len(self.axes_names_tuple)):
                 try:
-                    self.axes_objects_dict[self.axes_names_tuple[i]][1].setText("{:1.3f}".format(self.axes_positions[i]))
+                    self.axes_objects_dict[self.axes_names_tuple[i]][1].setText(
+                        "{:1.3f}".format(self.axes_positions[i]))
                 except Exception as e:
                     logging.exception(e)
                     pass

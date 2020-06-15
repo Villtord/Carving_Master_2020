@@ -114,10 +114,20 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
         carving_state = [False if "idle" in self.send_command("{req,'MCU8',get_state}.\r\n") else True]
         return carving_state
 
+    def move_axis_abs(self, axis_name):
+        new_position = (, , , , ,)
+        try:
+            new_position[self.axes_names_tuple.index(axis_name)] = float(self.axes_objects_dict[axis_name][2].text())
+        except Exception as e:
+            logging.exception(e)
+            print('error reading new position value from lineedit')
+            pass
+        self.set_position(new_position)
+
     def set_position(self, position):
         """
         :type position: list
-        position is a list of 6 values separated by , . No value means no command to move this axis.
+        Position must be a list of 6 values separated by , . No value means no command to move this axis.
         """
         self.timer_x.stop()
         self.position = position

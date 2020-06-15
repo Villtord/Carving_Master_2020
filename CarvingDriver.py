@@ -89,7 +89,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                             print("{req,'MCU8',get_state}. failed")
                             local_reply = ""
                             pass
-        # self.start_timer()
+        self.start_timer()
     def start_timer(self):
         """Every self.timing [ms] checking connection with server and trying to get positions"""
         self.timing = 2000
@@ -105,7 +105,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
     def get_position(self):
         """ Get axis positions from MCU8 """
         positions = self.send_command("{req,'MCU8',get_position}.\r\n")
-        # positions = "{'MCU8',{ok,[{axis_pos,0,8.000244140625},{axis_pos,1,-7.999755859375},{axis_pos,2,202.00006103515625},{axis_pos,3,-130.00079013677276},{axis_pos,4,0.0},{axis_pos,5,0.0}]}}"
+        positions = "{'MCU8',{ok,[{axis_pos,0,8.000244140625},{axis_pos,1,-7.999755859375},{axis_pos,2,202.00006103515625},{axis_pos,3,-130.00079013677276},{axis_pos,4,0.0},{axis_pos,5,0.0}]}}"
         self.positions_signal.emit(positions)
 
     @property
@@ -115,9 +115,11 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
         return carving_state
 
     def move_axis_abs(self, axis_name):
-        new_position = (, , , , ,)
+        """Move one axis to the desired position from LineEdit field"""
+        new_position = tuple([(i == axis_name) for i in self.axes_names_tuple])
         try:
-            new_position[self.axes_names_tuple.index(axis_name)] = float(self.axes_objects_dict[axis_name][2].text())
+            new_position = tuple([float(self.axes_objects_dict[axis_name][2].text()) if name==axis_name else None
+                                  for name in self.axes_names_tuple])
         except Exception as e:
             logging.exception(e)
             print('error reading new position value from lineedit')
@@ -127,14 +129,14 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
     def set_position(self, position):
         """
         :type position: list
-        Position must be a list of 6 values separated by , . No value means no command to move this axis.
+        Position must be a list of 6 values (float,None) separated by , . NONE value means no command to move this axis.
         """
         self.timer_x.stop()
         self.position = position
         print (self.position)
         new_command = "{req,'MCU8',{set_position,["
         for i in range(len(position)):
-            if position[i] != None:
+            if position[i] is not None:
                 new_command += "{axis_pos,"+f'{i},{self.position[i]}'+"},"
         final_command = new_command[:-1]+"]}}.\r\n"
         self.send_command(final_command)

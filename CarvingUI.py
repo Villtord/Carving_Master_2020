@@ -20,6 +20,9 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__()
         self.setupUi(self)
+        """ Make a separate thread to monitor/control Carving """
+        self.MyCarving = CarvingControlDriver("localhost", 40002)
+
         """     Imported from CarvingBasicUI:
                 self.axes_names_tuple = (" X ", " Y ", " Z ", "Pol", "Azi", "Tilt" )
                 self.axes_objects_dict = {" X ":{0:QLabelObject, 1:QLabelObject, 2:QLineEditObject,
@@ -47,24 +50,38 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
             """direct construction of lambda with argument and extra 
             variable a - otherwise b results in False/True??? """
             self.axes_objects_dict[axis_name][2].returnPressed.connect(
-                lambda a, b=axis_name: self.MyCarving.move_axis_abs(b))
+                lambda b=axis_name: self.move_axis_abs(b))
 
         """ Connect stop button """
         self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].clicked.connect(
             lambda: self.MyCarving.stop_manipulator())
 
-        """ Make a separate thread to monitor/control Carving """
-        self.MyCarving = CarvingControlDriver("localhost", 40002)
-        self.MyCarving.positions_signal.connect(self.update_positions)
+        self.start_flag = True  # flag to update abs move axis lineedits at first start of the GUI
+
+        self.MyCarving.actual_position_signal.connect(self.update_positions)
+        self.MyCarving.new_position_signal.connect(self.update_target_positions)
         self.MyCarving.start()  # start this separate thread to get pressure
         gc.collect()
+
+    def move_axis_abs(self, axis_name):
+        """Move one axis to the desired position from LineEdit field.
+        New position must be a list of 6 values (float,None) separated by , .
+        NONE value means no command to move this axis."""
+        try:
+            new_position = tuple([float(self.axes_objects_dict[axis_name][2].text()) if name == axis_name else None
+                                  for name in self.axes_names_tuple])
+            self.MyCarving.set_position(new_position)
+        except Exception as e:
+            logging.exception(e)
+            print('error reading new position value from LineEdit for abs move of axis' + axis_name)
+            pass
 
     def update_positions(self, reply):
         """ Update manipulator positions """
         self.reply = reply
         if "ok" in self.reply:
             print(self.reply)
-            self.axes_positions = [float(i.split(',')[-1]) for i in self.reply.split('}')[:-3]]
+            self.axes_positions = [float(i.split(',')[-1]) for i in self.reply.split('}')[:6]]
             print(self.axes_positions)
             for i in range(len(self.axes_names_tuple)):
                 try:
@@ -73,10 +90,20 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
                 except Exception as e:
                     logging.exception(e)
                     pass
+            if self.start_flag:
+                self.update_target_positions(self.axes_positions)
+                self.start_flag = False
         else:
             print("no/wrong reply from MCU while updating positions")
             pass
         gc.collect()
+
+    def update_target_positions(self, new_position):
+        """Here we update abs axes move lineedits ones the new_position is received: mainly for predefined positions!"""
+        self.new_target_position = new_position
+        
+        for i in range(len(self.axes_names_tuple)):
+            self.axes_objects_dict[self.axes_names_tuple[i]][2].setText('{:.3f}'.format(self.new_target_position[i]))
 
     def resizeEvent(self, evt):
         """ Possibility to resize GUI window """

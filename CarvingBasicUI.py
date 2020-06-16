@@ -16,7 +16,7 @@ class Ui_MainWindow(object):
             self.w = args[0]
             self.h = args[1]
         else:
-            self.w = 500
+            self.w = 600
             self.h = 300
         pass
 
@@ -111,7 +111,9 @@ class Ui_MainWindow(object):
 
         "Label showing current position of the axis"
         self.Label = QtWidgets.QLabel(self.layoutWidget)
-        sizePolicy.setHeightForWidth(self.Label.sizePolicy().hasHeightForWidth())
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Expanding)
+        # sizePolicy.setHeightForWidth(self.Label.sizePolicy().hasHeightForWidth())
+        self.Label.setFixedWidth(100)
         self.Label.setSizePolicy(sizePolicy)
         self.Label.setFont(font)
         self.Label.setAlignment(QtCore.Qt.AlignCenter)

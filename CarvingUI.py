@@ -8,7 +8,7 @@ UI to control SPECS Carving manipulator
 @author: Victor Rogalev
 """
 from __future__ import unicode_literals
-from PyQt5.QtWidgets import QWidget
+from PyQt5.QtWidgets import QWidget, QMessageBox
 from CarvingDriver import CarvingControlDriver
 from CarvingBasicUI import Ui_MainWindow
 from PyQt5 import QtCore, QtWidgets
@@ -16,7 +16,19 @@ import logging
 import gc
 
 
+def are_you_sure_decorator(func):
+    def wrapper(self, *args):
+        button_reply = QMessageBox.question(self, 'PyQt5 message', "ARE YOU SURE???", QMessageBox.Yes | QMessageBox.No,
+                                            QMessageBox.No)
+        if button_reply == QMessageBox.Yes:
+            func(self, *args)
+        else:
+            pass
+    return wrapper
+
+
 class CarvingControlApp(QWidget, Ui_MainWindow):
+
     def __init__(self, *args, **kwargs):
         super(self.__class__, self).__init__()
         self.setupUi(self)
@@ -59,13 +71,15 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
         self.MyCarving.start()  # start this separate thread to get pressure
         gc.collect()
 
+    @are_you_sure_decorator
     def move_axis_abs(self, axis_name):
         """Move one axis to the desired position from LineEdit field.
         New position must be a list of 6 values (float,None) separated by , .
         NONE value means no command to move this axis."""
         "replace comma with dot"
         if "," in self.axes_objects_dict[axis_name][2].text():
-            self.axes_objects_dict[axis_name][2].setText(self.axes_objects_dict[axis_name][2].text().replace(",", "."))
+            self.axes_objects_dict[axis_name][2].setText(
+                self.axes_objects_dict[axis_name][2].text().replace(",", "."))
         "construct new position vector but check before the backlash settings:if on move first to compensate backlash"
         try:
             if self.backlash_radiobutton.isChecked():

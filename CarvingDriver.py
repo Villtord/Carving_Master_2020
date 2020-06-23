@@ -94,7 +94,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
 
     def start_timer(self):
         """Every self.timing [ms] checking connection with server and trying to get positions"""
-        self.timing = 2000
+        self.timing = 1000
         self.timer_x = PyQt5.QtCore.QTimer(self)
         self.timer_x.timeout.connect(self.get_position)
         self.timer_x.start(self.timing)
@@ -160,7 +160,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                     self.wait_reply = ""
                     loop_flag = False
             self.reply = self.send_reply + self.wait_reply
-            print(self.reply)
+            # print(self.reply)
         except Exception as e:
             logging.exception(e)
             self.reply = ""

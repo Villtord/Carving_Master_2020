@@ -45,14 +45,14 @@ class Ui_MainWindow(object):
         self.layoutWidget.setGeometry(QtCore.QRect(10, 10, self.w-20, self.h-20))
         self.layoutWidget.setObjectName("layoutWidget")
 
-        self.MainHorizontalLayout = QtWidgets.QHBoxLayout(self.layoutWidget)
-
-        self.VerticalLayoutXYZ = QtWidgets.QVBoxLayout()
-        self.VerticalLayoutXYZ.setContentsMargins(0, 0, 0, 0)
-        self.VerticalLayoutXYZ.setObjectName("VerticalLayoutXYZ")
+        self.MainVerticalLayout = QtWidgets.QVBoxLayout(self.layoutWidget)
+        self.MainHorizontalLayout = QtWidgets.QHBoxLayout()
 
         """Create axes control labels/buttons and pack them into a dictionary self.axes_objects_dict which looks like
         {" X ":SingleAxisControlDict, " Y ":SingleAxisControlDict,...}"""
+        self.VerticalLayoutXYZ = QtWidgets.QVBoxLayout()
+        self.VerticalLayoutXYZ.setContentsMargins(0, 0, 0, 0)
+        self.VerticalLayoutXYZ.setObjectName("VerticalLayoutXYZ")
         self.axes_names_tuple = (" X ", " Y ", " Z ",  "Pol", "Azi", "Tilt")
         self.axes_objects_dict = {}
         for i in range(len(self.axes_names_tuple)):
@@ -69,13 +69,52 @@ class Ui_MainWindow(object):
             self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[i]]=self.SetPredefinedButtons()
             self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[i]].setText(self.predefined_buttons_names_tuple[i])
 
+
+        self.HorizontalLayoutPath = QtWidgets.QHBoxLayout()
+        self.HorizontalLayoutPath.setContentsMargins(0, 0, 0, 0)
+        """Set up the backlash RadioButton"""
+        self.backlash_radiobutton = QtWidgets.QRadioButton("BACKLASH", self.layoutWidget)
+        self.StyleSheetOn = "QRadioButton::indicator {width: 15px; height: 15px; border-radius: 7px;} " \
+                            "QRadioButton::indicator:checked { background-color: lime; border: 2px solid gray;} " \
+                            "QRadioButton::indicator:unchecked { background-color: black; border: 2px solid gray;}"
+
+        self.backlash_radiobutton.setStyleSheet(self.StyleSheetOn)
+        self.backlash_radiobutton.toggle()
+        self.HorizontalLayoutPath.addWidget(self.backlash_radiobutton)
+
+        """Path buttons horizontal layout"""
+        self.path_buttons_names_tuple = (" Add PATH ", " Edit PATH ", " Clear PATH ", " Generate PATH ")
+        self.path_buttons_objects_dict = {}
+        for i in range(len(self.path_buttons_names_tuple)):
+            self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]]=self.SetPathButtons()
+            self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]].setText(self.path_buttons_names_tuple[i])
+
+        """Combine all layouts"""
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutXYZ)
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutPredefined)
+        self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
+        self.MainVerticalLayout.addLayout(self.HorizontalLayoutPath)
+
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
+    def SetPathButtons(self):
+        "PushButton to work with path positions and generate path"
+        self.pushButton = QtWidgets.QPushButton(self.layoutWidget)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
+        self.pushButton.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setBold(False)
+        font.setKerning(True)
+        self.pushButton.setFont(font)
+        self.pushButton.setLayoutDirection(QtCore.Qt.LeftToRight)
+        self.pushButton.setCheckable(False)
+        self.HorizontalLayoutPath.addWidget(self.pushButton)
+        return self.pushButton
+
     def SetPredefinedButtons(self):
-        "PushButton to move the axis by delta to the lower values"
+        "PushButton to move the axis to a predefined position"
         self.pushButton = QtWidgets.QPushButton(self.layoutWidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
@@ -96,10 +135,11 @@ class Ui_MainWindow(object):
 
         "Label showing name of the axis"
         self.Label = QtWidgets.QLabel(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.Label.sizePolicy().hasHeightForWidth())
+        # sizePolicy.setHeightForWidth(self.Label.sizePolicy().hasHeightForWidth())
+        self.Label.setFixedWidth(30)
         self.Label.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setPointSize(16)
@@ -111,9 +151,8 @@ class Ui_MainWindow(object):
 
         "Label showing current position of the axis"
         self.Label = QtWidgets.QLabel(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Expanding)
         # sizePolicy.setHeightForWidth(self.Label.sizePolicy().hasHeightForWidth())
-        self.Label.setFixedWidth(100)
+        self.Label.setFixedWidth(90)
         self.Label.setSizePolicy(sizePolicy)
         self.Label.setFont(font)
         self.Label.setAlignment(QtCore.Qt.AlignCenter)

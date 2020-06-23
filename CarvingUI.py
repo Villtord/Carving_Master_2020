@@ -1,6 +1,6 @@
 """
 Server version: {tcp_gateway,{ok,"4.67.1-r91102","1.0"}}.
-Last update: 09 June 2020
+Last update: 23 June 2020
 Created: 08 June 2020
 
 UI to control SPECS Carving manipulator
@@ -40,19 +40,15 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
         """Connect signals and slots from predefined buttons/labels"""
         for i in range(len(self.predefined_buttons_names_tuple) - 1):
             position_name = self.predefined_buttons_names_tuple[i]
-            """direct construction of lambda with argument and extra 
-            variable a - otherwise b results in False/True??? """
+            """direct construction lambda with argument and extra variable a - otherwise b results in False/True??? """
             self.predefined_buttons_objects_dict[position_name].clicked.connect(
                 lambda a, b=self.predefined_positions_dict[position_name]: self.MyCarving.set_position(b))
 
         """Connect signals and slots from abs move axis buttons - moves only one axis where return was pressed!"""
         for axis_name in self.axes_names_tuple:
-            """direct construction of lambda with argument and extra 
-            variable a - otherwise b results in False/True??? """
-            self.axes_objects_dict[axis_name][2].returnPressed.connect(
-                lambda b=axis_name: self.move_axis_abs(b))
+            self.axes_objects_dict[axis_name][2].returnPressed.connect(lambda b=axis_name: self.move_axis_abs(b))
 
-        """ Connect stop button """
+        """Connect stop button"""
         self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].clicked.connect(
             lambda: self.MyCarving.stop_manipulator())
 
@@ -67,7 +63,18 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
         """Move one axis to the desired position from LineEdit field.
         New position must be a list of 6 values (float,None) separated by , .
         NONE value means no command to move this axis."""
+        "replace comma with dot"
+        if "," in self.axes_objects_dict[axis_name][2].text():
+            self.axes_objects_dict[axis_name][2].setText(self.axes_objects_dict[axis_name][2].text().replace(",", "."))
+        "construct new position vector but check before the backlash settings:if on move first to compensate backlash"
         try:
+            if self.backlash_radiobutton.isChecked():
+                if float(self.axes_objects_dict[axis_name][2].text()) < float(
+                        self.axes_objects_dict[axis_name][1].text()):
+                    backlash_position = tuple(
+                        [float(self.axes_objects_dict[axis_name][2].text()) - 0.5 if name == axis_name else None
+                         for name in self.axes_names_tuple])
+                    self.MyCarving.set_position(backlash_position)
             new_position = tuple([float(self.axes_objects_dict[axis_name][2].text()) if name == axis_name else None
                                   for name in self.axes_names_tuple])
             self.MyCarving.set_position(new_position)
@@ -80,9 +87,9 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
         """ Update manipulator positions """
         self.reply = reply
         if "ok" in self.reply:
-            print(self.reply)
+            # print(self.reply)
             self.axes_positions = [float(i.split(',')[-1]) for i in self.reply.split('}')[:6]]
-            print(self.axes_positions)
+            # print(self.axes_positions)
             for i in range(len(self.axes_names_tuple)):
                 try:
                     self.axes_objects_dict[self.axes_names_tuple[i]][1].setText(
@@ -101,7 +108,7 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
     def update_target_positions(self, new_position):
         """Here we update abs axes move lineedits ones the new_position is received: mainly for predefined positions!"""
         self.new_target_position = new_position
-        
+
         for i in range(len(self.axes_names_tuple)):
             self.axes_objects_dict[self.axes_names_tuple[i]][2].setText('{:.3f}'.format(self.new_target_position[i]))
 

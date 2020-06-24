@@ -8,30 +8,42 @@ UI to control SPECS Carving manipulator
 @author: Victor Rogalev
 """
 from __future__ import unicode_literals
-from PyQt5.QtWidgets import QWidget, QMessageBox
+from PyQt5.QtWidgets import QWidget, QMessageBox, QMainWindow
 from CarvingDriver import CarvingControlDriver
 from CarvingBasicUI import Ui_MainWindow
 from PyQt5 import QtCore, QtWidgets
 import logging
 import gc
 
+global god_mode_flag
+
+god_mode_flag = False
+
 
 def are_you_sure_decorator(func):
     def wrapper(self, *args):
-        button_reply = QMessageBox.question(self, 'PyQt5 message', "ARE YOU SURE???", QMessageBox.Yes | QMessageBox.No,
-                                            QMessageBox.No)
-        if button_reply == QMessageBox.Yes:
-            func(self, *args)
+        if not god_mode_flag:
+            button_reply = QMessageBox.question(self, 'PyQt5 message', "ARE YOU SURE???", QMessageBox.Yes | QMessageBox.No,
+                                                QMessageBox.No)
+            if button_reply == QMessageBox.Yes:
+                func(self, *args)
         else:
-            pass
+            func(self,*args)
+
     return wrapper
 
 
-class CarvingControlApp(QWidget, Ui_MainWindow):
+class CarvingControlApp(Ui_MainWindow):
+    # class CarvingControlApp(QWidget, Ui_MainWindow):
+    global god_mode_flag
 
-    def __init__(self, *args, **kwargs):
-        super(self.__class__, self).__init__()
-        self.setupUi(self)
+    def __init__(self, *args):
+        # super().__init__(self, *args, **kwargs)
+        super(self.__class__, self).__init__(self, *args)
+        self.initialize()
+
+    def initialize(self):
+
         """ Make a separate thread to monitor/control Carving """
         self.MyCarving = CarvingControlDriver("localhost", 40002)
 
@@ -54,7 +66,7 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
             position_name = self.predefined_buttons_names_tuple[i]
             """direct construction lambda with argument and extra variable a - otherwise b results in False/True??? """
             self.predefined_buttons_objects_dict[position_name].clicked.connect(
-                lambda a, b=self.predefined_positions_dict[position_name]: self.MyCarving.set_position(b))
+                lambda a, b=position_name: self.set_predefined_positions(b))
 
         """Connect signals and slots from abs move axis buttons - moves only one axis where return was pressed!"""
         for axis_name in self.axes_names_tuple:
@@ -65,12 +77,23 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
             lambda: self.MyCarving.stop_manipulator())
 
         self.start_flag = True  # flag to update abs move axis lineedits at first start of the GUI
+        """Connect toggle God Mode action"""
+        self.toggle_mode_action.triggered.connect(self.toggle_god_mode)
 
         self.MyCarving.actual_position_signal.connect(self.update_positions)
         self.MyCarving.new_position_signal.connect(self.update_target_positions)
         self.MyCarving.start()  # start this separate thread to get pressure
         gc.collect()
 
+    def toggle_god_mode(self, state):
+        global god_mode_flag
+        god_mode_flag = state
+        if state:
+            self.layoutWidget.setStyleSheet("background-color:red;")
+        else:
+            self.layoutWidget.setStyleSheet("background-color:grey;")
+
+    "Are you sure confirmation window is not shown only if god_mode_flag is True - 2 decorators construction"
     @are_you_sure_decorator
     def move_axis_abs(self, axis_name):
         """Move one axis to the desired position from LineEdit field.
@@ -96,6 +119,11 @@ class CarvingControlApp(QWidget, Ui_MainWindow):
             logging.exception(e)
             print('error reading new position value from LineEdit for abs move of axis' + axis_name)
             pass
+
+    "Are you sure confirmation window is not shown only if god_mode_flag is True - 2 decorators construction"
+    @are_you_sure_decorator
+    def set_predefined_positions(self, position_name):
+        self.MyCarving.set_position(self.predefined_positions_dict[position_name])
 
     def update_positions(self, reply):
         """ Update manipulator positions """

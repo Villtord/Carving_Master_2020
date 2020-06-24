@@ -8,42 +8,33 @@ Basic UI to control SPECS Carving manipulator
 @author: Victor Rogalev
 """
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QMainWindow, QAction
 
 
-class Ui_MainWindow(object):
+class Ui_MainWindow(QMainWindow):
     def __init__(self, *args):
-        if args:
-            self.w = args[0]
-            self.h = args[1]
-        else:
-            self.w = 600
-            self.h = 300
-        pass
+        super().__init__()
+        self.w = 300
+        self.h = 200
+        self.setGeometry(300, 300, self.w, self.h)
+        self.my_menu_bar = self.menuBar()
+        self.options_menu = self.my_menu_bar.addMenu('Options')
+        # self.statusbar = self.statusBar()
+        # self.statusbar.showMessage('Ready')
 
-    def setupUi(self, MainWindow):
+        self.toggle_mode_action = QAction('God Mode', self, checkable=True)
+        self.toggle_mode_action.setStatusTip('Enable God Mode')
+        self.toggle_mode_action.setChecked(False)
+        self.options_menu.addAction(self.toggle_mode_action)
 
-        MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(self.w,self.h)
+        self.setup_ui()
 
-        self.centralwidget = QtWidgets.QWidget(MainWindow)
-        self.centralwidget.setObjectName("centralwidget")
-        self.frame = QtWidgets.QFrame(self.centralwidget)
-        self.frame.setGeometry(QtCore.QRect(5, 5, self.w-10, self.h-10))
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
-        self.frame.setSizePolicy(sizePolicy)
-        self.frame.setToolTipDuration(1)
-        self.frame.setLayoutDirection(QtCore.Qt.LeftToRight)
-        self.frame.setAutoFillBackground(False)
-        self.frame.setFrameShape(QtWidgets.QFrame.NoFrame)
-        self.frame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.frame.setLineWidth(1)
-        self.frame.setObjectName("frame")
-        self.layoutWidget = QtWidgets.QWidget(self.frame)
-        self.layoutWidget.setGeometry(QtCore.QRect(10, 10, self.w-20, self.h-20))
+    def setup_ui(self):
+
+        self.layoutWidget = QtWidgets.QWidget(self)
+        # self.layoutWidget.setGeometry(QtCore.QRect(10, 10, self.w-10, self.h-10))
         self.layoutWidget.setObjectName("layoutWidget")
+        self.setCentralWidget(self.layoutWidget)
 
         self.MainVerticalLayout = QtWidgets.QVBoxLayout(self.layoutWidget)
         self.MainHorizontalLayout = QtWidgets.QHBoxLayout()
@@ -95,8 +86,7 @@ class Ui_MainWindow(object):
         self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
         self.MainVerticalLayout.addLayout(self.HorizontalLayoutPath)
 
-        self.retranslateUi(MainWindow)
-        QtCore.QMetaObject.connectSlotsByName(MainWindow)
+
 
     def SetPathButtons(self):
         "PushButton to work with path positions and generate path"
@@ -163,6 +153,7 @@ class Ui_MainWindow(object):
 
         "LineEdit to enter the required position of the axis"
         self.LineEdit = QtWidgets.QLineEdit(self.layoutWidget)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHeightForWidth(self.LineEdit.sizePolicy().hasHeightForWidth())
         self.LineEdit.setSizePolicy(sizePolicy)
         self.LineEdit.setFont(font)
@@ -221,7 +212,3 @@ class Ui_MainWindow(object):
         self.HorizontalLayout.addStretch()
 
         self.VerticalLayoutXYZ.addLayout(self.HorizontalLayout)
-
-    def retranslateUi(self, MainWindow):
-        _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))

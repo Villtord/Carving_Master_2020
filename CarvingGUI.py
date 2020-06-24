@@ -15,7 +15,7 @@ import CarvingUI
 
 def main():
     app = PyQt5.QtWidgets.QApplication(sys.argv)  # A new instance of QApplication
-    form = CarvingUI.CarvingControlApp()  # We set the form to be our ExampleApp (design)
+    form = CarvingUI.CarvingControlApp()  # We set the form
     form.setWindowTitle('Carving Master 2020')  # Change window name
     # form.resize(500, 500)  # Resize the form
     form.show()  # Show the form

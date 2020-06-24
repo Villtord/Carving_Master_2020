@@ -123,6 +123,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
         """
         self.timer_x.stop()
         self.new_position = new_position
+        """emit predefined positions to update target lineedits"""
         if None not in self.new_position:
             self.new_position_signal.emit(self.new_position)
         new_command = "{req,'MCU8',{set_position,["

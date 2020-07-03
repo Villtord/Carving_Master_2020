@@ -34,6 +34,7 @@ class Ui_MainWindow(QMainWindow):
         self.layoutWidget = QtWidgets.QWidget(self)
         # self.layoutWidget.setGeometry(QtCore.QRect(10, 10, self.w-10, self.h-10))
         self.layoutWidget.setObjectName("layoutWidget")
+        self.layoutWidget.setStyleSheet("background-color:grey;")
         self.setCentralWidget(self.layoutWidget)
 
         self.MainVerticalLayout = QtWidgets.QVBoxLayout(self.layoutWidget)

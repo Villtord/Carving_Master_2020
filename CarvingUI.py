@@ -23,12 +23,13 @@ god_mode_flag = False
 def are_you_sure_decorator(func):
     def wrapper(self, *args):
         if not god_mode_flag:
-            button_reply = QMessageBox.question(self, 'PyQt5 message', "ARE YOU SURE???", QMessageBox.Yes | QMessageBox.No,
+            button_reply = QMessageBox.question(self, 'PyQt5 message', "ARE YOU SURE???",
+                                                QMessageBox.Yes | QMessageBox.No,
                                                 QMessageBox.No)
             if button_reply == QMessageBox.Yes:
                 func(self, *args)
         else:
-            func(self,*args)
+            func(self, *args)
 
     return wrapper
 
@@ -41,6 +42,8 @@ class CarvingControlApp(Ui_MainWindow):
         # super().__init__(self, *args, **kwargs)
         super(self.__class__, self).__init__(self, *args)
         self.initialize()
+        self.start_flag = True  # flag to update abs move axis lineedits at first start of the GUI
+        self.shift_value = 0.0  # default shift value for axes
 
     def initialize(self):
 
@@ -72,13 +75,18 @@ class CarvingControlApp(Ui_MainWindow):
         for axis_name in self.axes_names_tuple:
             self.axes_objects_dict[axis_name][2].returnPressed.connect(lambda b=axis_name: self.move_axis_abs(b))
 
+        """Connect signals and slots from relative move axis buttons"""
+        for axis_name in self.axes_names_tuple:
+            self.axes_objects_dict[axis_name][3].clicked.connect(lambda a, b=axis_name: self.move_axis_rel(b, "<<"))
+            self.axes_objects_dict[axis_name][5].clicked.connect(lambda a, b=axis_name: self.move_axis_rel(b, ">>"))
+
         """Connect stop button"""
         self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].clicked.connect(
             lambda: self.MyCarving.stop_manipulator())
 
-        self.start_flag = True  # flag to update abs move axis lineedits at first start of the GUI
         """Connect toggle God Mode action"""
         self.toggle_mode_action.triggered.connect(self.toggle_god_mode)
+        self.toggle_god_mode(False)
 
         self.MyCarving.actual_position_signal.connect(self.update_positions)
         self.MyCarving.new_position_signal.connect(self.update_target_positions)
@@ -88,12 +96,23 @@ class CarvingControlApp(Ui_MainWindow):
     def toggle_god_mode(self, state):
         global god_mode_flag
         god_mode_flag = state
-        if state:
-            self.layoutWidget.setStyleSheet("background-color:red;")
+        if god_mode_flag:
+            self.layoutWidget.setStyleSheet("background-color:pink;")
+            self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].setStyleSheet("background"
+                                                                                                       "-color:green;")
+            for axis_name in self.axes_names_tuple:
+                self.axes_objects_dict[axis_name][2].setStyleSheet("background-color:white;")
+                self.axes_objects_dict[axis_name][4].setStyleSheet("background-color:white;")
         else:
             self.layoutWidget.setStyleSheet("background-color:grey;")
+            self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].setStyleSheet(
+                "background-color:red;")
+            for axis_name in self.axes_names_tuple:
+                self.axes_objects_dict[axis_name][2].setStyleSheet("background-color:white;")
+                self.axes_objects_dict[axis_name][4].setStyleSheet("background-color:white;")
 
-    "Are you sure confirmation window is not shown only if god_mode_flag is True - 2 decorators construction"
+    "Are you sure confirmation window is not shown only if god_mode_flag is True"
+
     @are_you_sure_decorator
     def move_axis_abs(self, axis_name):
         """Move one axis to the desired position from LineEdit field.
@@ -106,8 +125,8 @@ class CarvingControlApp(Ui_MainWindow):
         "construct new position vector but check before the backlash settings:if on move first to compensate backlash"
         try:
             if self.backlash_radiobutton.isChecked():
-                if float(self.axes_objects_dict[axis_name][2].text()) < float(
-                        self.axes_objects_dict[axis_name][1].text()):
+                if float(self.axes_objects_dict[axis_name][2].text()) < self.axes_positions[
+                    self.axes_names_tuple.index(axis_name)]:
                     backlash_position = tuple(
                         [float(self.axes_objects_dict[axis_name][2].text()) - 0.5 if name == axis_name else None
                          for name in self.axes_names_tuple])
@@ -120,10 +139,55 @@ class CarvingControlApp(Ui_MainWindow):
             print('error reading new position value from LineEdit for abs move of axis' + axis_name)
             pass
 
-    "Are you sure confirmation window is not shown only if god_mode_flag is True - 2 decorators construction"
+    @are_you_sure_decorator
+    def move_axis_rel(self, axis_name, direction):
+        print("axis_name ", axis_name)
+        print("direction ", direction)
+        """Shift position along the axis by user-defined value left or right"""
+        "replace comma with dot"
+        if "," in self.axes_objects_dict[axis_name][4].text():
+            self.axes_objects_dict[axis_name][4].setText(
+                self.axes_objects_dict[axis_name][4].text().replace(",", "."))
+        "get the shift value"
+        try:
+            self.shift_value = float(self.axes_objects_dict[axis_name][4].text())
+        except Exception as e:
+            logging.exception(e)
+            print('error reading shift value from LineEdit for ' + axis_name)
+            self.shift_value = 0.0
+            pass
+        "get new position value"
+        if direction == "<<":
+            self.target_shift_position = self.axes_positions[self.axes_names_tuple.index(axis_name)] - self.shift_value
+        else:
+            self.target_shift_position = self.axes_positions[self.axes_names_tuple.index(axis_name)] + self.shift_value
+
+        "construct new position vector but check before the backlash settings:if on move first to compensate backlash"
+        try:
+            if self.backlash_radiobutton.isChecked():
+                if self.target_shift_position < float(
+                        self.axes_objects_dict[axis_name][1].text()):
+                    backlash_position = tuple(
+                        [self.target_shift_position - 0.5 if name == axis_name else None
+                         for name in self.axes_names_tuple])
+                    self.MyCarving.set_position(backlash_position)
+            new_position = tuple([self.target_shift_position if name == axis_name else None
+                                  for name in self.axes_names_tuple])
+            print(new_position)
+            self.MyCarving.set_position(new_position)
+        except Exception as e:
+            logging.exception(e)
+            print('error reading new position value from LineEdit for abs move of axis' + axis_name)
+            pass
+        # get the current axis position
+        # move axis accordingly
+
+    "Are you sure confirmation window is not shown only if god_mode_flag is True"
+
     @are_you_sure_decorator
     def set_predefined_positions(self, position_name):
         self.MyCarving.set_position(self.predefined_positions_dict[position_name])
+        self.start_flag = True
 
     def update_positions(self, reply):
         """ Update manipulator positions """

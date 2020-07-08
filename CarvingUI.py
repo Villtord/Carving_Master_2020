@@ -11,9 +11,11 @@ from __future__ import unicode_literals
 from PyQt5.QtWidgets import QWidget, QMessageBox, QMainWindow
 from CarvingDriver import CarvingControlDriver
 from CarvingBasicUI import Ui_MainWindow
-from PyQt5 import QtCore, QtWidgets
+from CameraClass import get_image
+from PyQt5 import QtGui, QtCore
 import logging
 import gc
+import numpy as np
 
 global god_mode_flag
 
@@ -90,7 +92,15 @@ class CarvingControlApp(Ui_MainWindow):
 
         self.MyCarving.actual_position_signal.connect(self.update_positions)
         self.MyCarving.new_position_signal.connect(self.update_target_positions)
-        self.MyCarving.start()  # start this separate thread to get pressure
+        self.MyCarving.start()  # start this separate thread to get positions
+
+        "Connect camera and show images - image settings can be defined in basler pylon sdk"
+        self.image = get_image()
+        new_image = QtGui.QPixmap("saved_pypylon_img.jpeg")
+        self.camera_image.setPixmap(new_image.scaled(500,400,QtCore.Qt.KeepAspectRatio))
+        # self.camera_image.setFixedWidth(400)
+        self.camera_image.setFixedHeight(400)
+
         gc.collect()
 
     def toggle_god_mode(self, state):
@@ -112,7 +122,6 @@ class CarvingControlApp(Ui_MainWindow):
                 self.axes_objects_dict[axis_name][4].setStyleSheet("background-color:white;")
 
     "Are you sure confirmation window is not shown only if god_mode_flag is True"
-
     @are_you_sure_decorator
     def move_axis_abs(self, axis_name):
         """Move one axis to the desired position from LineEdit field.
@@ -183,14 +192,12 @@ class CarvingControlApp(Ui_MainWindow):
         # move axis accordingly
 
     "Are you sure confirmation window is not shown only if god_mode_flag is True"
-
     @are_you_sure_decorator
     def set_predefined_positions(self, position_name):
         self.MyCarving.set_position(self.predefined_positions_dict[position_name])
-        self.start_flag = True
 
     def update_positions(self, reply):
-        """ Update manipulator positions """
+        """ Update manipulator positions once the new_position_signal signal recieved from MyCarving"""
         self.reply = reply
         if "ok" in self.reply:
             # print(self.reply)

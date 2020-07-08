@@ -8,10 +8,12 @@ UI to control SPECS Carving manipulator
 @author: Victor Rogalev
 """
 from __future__ import unicode_literals
+
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QWidget, QMessageBox, QMainWindow
 from CarvingDriver import CarvingControlDriver
 from CarvingBasicUI import Ui_MainWindow
-from CameraClass import get_image
+from CameraClass import CameraGrabber
 from PyQt5 import QtGui, QtCore
 import logging
 import gc
@@ -95,13 +97,20 @@ class CarvingControlApp(Ui_MainWindow):
         self.MyCarving.start()  # start this separate thread to get positions
 
         "Connect camera and show images - image settings can be defined in basler pylon sdk"
-        self.image = get_image()
-        new_image = QtGui.QPixmap("saved_pypylon_img.jpeg")
-        self.camera_image.setPixmap(new_image.scaled(500,400,QtCore.Qt.KeepAspectRatio))
-        # self.camera_image.setFixedWidth(400)
-        self.camera_image.setFixedHeight(400)
+        self.my_camera_object = CameraGrabber()
+        self.my_camera_object.new_image_signal.connect(self.update_camera_image)
+        self.my_camera_object.start()
+
+        # new_image = QtGui.QPixmap("saved_pypylon_img.jpeg")
+        # self.camera_image_label.setPixmap(new_image.scaled(500, 400, QtCore.Qt.KeepAspectRatio))
+        self.camera_image_label.setFixedHeight(400)
 
         gc.collect()
+
+    def update_camera_image(self, new_image):
+        print (new_image.shape, new_image.max())
+        self.new_image = QtGui.QImage(new_image, new_image.shape[1], new_image.shape[0], QtGui.QImage.Format_RGB888)
+        self.camera_image_label.setPixmap(QPixmap(self.new_image.scaled(500, 400, QtCore.Qt.KeepAspectRatio)))
 
     def toggle_god_mode(self, state):
         global god_mode_flag
@@ -122,6 +131,7 @@ class CarvingControlApp(Ui_MainWindow):
                 self.axes_objects_dict[axis_name][4].setStyleSheet("background-color:white;")
 
     "Are you sure confirmation window is not shown only if god_mode_flag is True"
+
     @are_you_sure_decorator
     def move_axis_abs(self, axis_name):
         """Move one axis to the desired position from LineEdit field.
@@ -192,6 +202,7 @@ class CarvingControlApp(Ui_MainWindow):
         # move axis accordingly
 
     "Are you sure confirmation window is not shown only if god_mode_flag is True"
+
     @are_you_sure_decorator
     def set_predefined_positions(self, position_name):
         self.MyCarving.set_position(self.predefined_positions_dict[position_name])
@@ -238,6 +249,7 @@ class CarvingControlApp(Ui_MainWindow):
             self.MyCarving.close()
         except:
             pass
+        self.my_camera_object.stop()
         self.MyCarving.timer_x.stop()
         self.MyCarving.timer_x.deleteLater()
 
@@ -246,5 +258,6 @@ class CarvingControlApp(Ui_MainWindow):
             self.MyCarving.close()
         except:
             pass
+        self.my_camera_object.stop()
         self.MyCarving.timer_x.stop()
         self.MyCarving.timer_x.deleteLater()

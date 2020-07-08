@@ -82,19 +82,19 @@ class Ui_MainWindow(QMainWindow):
             self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]].setText(self.path_buttons_names_tuple[i])
 
         "Add label to show image from camera on it"
-        self.camera_image = QtWidgets.QLabel(self.layoutWidget)
+        self.camera_image_label = QtWidgets.QLabel(self.layoutWidget)
         # sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         # sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         # self.camera_image.setSizePolicy(sizePolicy)
-        self.camera_image.setGeometry(QtCore.QRect(0,0, self.w, 200))
-        self.camera_image.setText("HERE WILL BE IMAGE FROM CAMERA")
+        self.camera_image_label.setGeometry(QtCore.QRect(0, 0, self.w, 200))
+        self.camera_image_label.setText("HERE WILL BE IMAGE FROM CAMERA")
 
         """Combine all layouts"""
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutXYZ)
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutPredefined)
         self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
         self.MainVerticalLayout.addLayout(self.HorizontalLayoutPath)
-        self.MainVerticalLayout.addWidget(self.camera_image)
+        self.MainVerticalLayout.addWidget(self.camera_image_label)
 
 
     def SetPathButtons(self):

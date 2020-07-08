@@ -34,6 +34,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
         self.connection_flag = False
         self.host = host
         self.port = port
+        self.init_check = False
         print('establishing connection with host, port', self.host, self.port)
         self.mySocket = socket.socket()
         """Initial socket connection - the reply is expected to be {tcp_gateway,{ok,"4.67.1-r91102","1.0"}}."""
@@ -84,7 +85,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                     if "ok" in local_reply:
                         try:
                             local_reply = self.send_command("{req,'MCU8',get_state}.\r\n")
-                            self.start_timer()
+                            self.init_check = True
                         except Exception as e:
                             logging.exception(e)
                             print("{req,'MCU8',get_state}. failed")
@@ -92,12 +93,15 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                             pass
 #        self.start_timer()
 
-    def start_timer(self):
+    def run(self):
         """Every self.timing [ms] checking connection with server and trying to get positions"""
-        self.timing = 1000
-        self.timer_x = PyQt5.QtCore.QTimer(self)
-        self.timer_x.timeout.connect(self.get_position)
-        self.timer_x.start(self.timing)
+        if self.init_check:
+            self.timing = 1000
+            self.timer_x = PyQt5.QtCore.QTimer(self)
+            self.timer_x.timeout.connect(self.get_position)
+            self.timer_x.start(self.timing)
+        else:
+            print ("error while initial check of the manipulator")
 
     def stop_manipulator(self):
         self.timer_x.stop()

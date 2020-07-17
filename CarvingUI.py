@@ -14,10 +14,11 @@ from PyQt5.QtWidgets import QWidget, QMessageBox, QMainWindow
 from CarvingDriver import CarvingControlDriver
 from CarvingBasicUI import Ui_MainWindow
 from CameraClass import CameraGrabber
-from PyQt5 import QtGui, QtCore
+# from camera_class_test import CameraGrabber
+from PyQt5.QtCore import QThreadPool, QTimer
 import logging
 import gc
-import numpy as np
+
 
 global god_mode_flag
 
@@ -45,6 +46,7 @@ class CarvingControlApp(Ui_MainWindow):
     def __init__(self, *args):
         # super().__init__(self, *args, **kwargs)
         super(self.__class__, self).__init__(self, *args)
+        self.threadpool = QThreadPool()
         self.initialize()
         self.start_flag = True  # flag to update abs move axis lineedits at first start of the GUI
         self.shift_value = 0.0  # default shift value for axes
@@ -96,22 +98,12 @@ class CarvingControlApp(Ui_MainWindow):
         self.MyCarving.new_position_signal.connect(self.update_target_positions)
         self.MyCarving.start()  # start this separate thread to get positions
 
-        "Connect camera and show images - image settings can be defined in basler pylon sdk"
-        self.my_camera_object = CameraGrabber()
-        self.my_camera_object.new_image_signal.connect(self.update_camera_image)
-        self.my_camera_object.start()
+        "Connect camera"
+        self.my_camera_object = CameraGrabber(self.subplot, self.canvas)
+        # Execute thread
+        self.threadpool.start(self.my_camera_object)
 
-        # new_image = QtGui.QPixmap("saved_pypylon_img.jpeg")
-        # self.camera_image_label.setPixmap(new_image.scaled(500, 400, QtCore.Qt.KeepAspectRatio))
-        self.camera_image_label.setFixedHeight(400)
-
-        gc.collect()
-
-    def update_camera_image(self, new_image):
-        print (new_image.shape, new_image.max())
-        self.new_image = QtGui.QImage(new_image, new_image.shape[1], new_image.shape[0], QtGui.QImage.Format_RGB888)
-        self.camera_image_label.setPixmap(QPixmap(self.new_image.scaled(500, 400, QtCore.Qt.KeepAspectRatio)))
-
+        
     def toggle_god_mode(self, state):
         global god_mode_flag
         god_mode_flag = state

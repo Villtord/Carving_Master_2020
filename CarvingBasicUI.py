@@ -9,13 +9,15 @@ Basic UI to control SPECS Carving manipulator
 """
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QAction
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
 
 
 class Ui_MainWindow(QMainWindow):
     def __init__(self, *args):
         super().__init__()
         self.w = 300
-        self.h = 500
+        self.h = 800
         self.setGeometry(300, 300, self.w, self.h)
         self.my_menu_bar = self.menuBar()
         self.options_menu = self.my_menu_bar.addMenu('Options')
@@ -82,19 +84,22 @@ class Ui_MainWindow(QMainWindow):
             self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]].setText(self.path_buttons_names_tuple[i])
 
         "Add label to show image from camera on it"
-        self.camera_image_label = QtWidgets.QLabel(self.layoutWidget)
-        # sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        # sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
-        # self.camera_image.setSizePolicy(sizePolicy)
-        self.camera_image_label.setGeometry(QtCore.QRect(0, 0, self.w, 200))
-        self.camera_image_label.setText("HERE WILL BE IMAGE FROM CAMERA")
+        # self.camera_image_label = QtWidgets.QLabel(self.layoutWidget)
+        # self.camera_image_label.setGeometry(QtCore.QRect(0, 0, self.w, 200))
+        # self.camera_image_label.setText("HERE WILL BE IMAGE FROM CAMERA")
+        
+        self.figure = Figure(figsize=(10, 8),facecolor=None, edgecolor=None)
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.subplot = self.figure.subplots()
+        
 
         """Combine all layouts"""
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutXYZ)
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutPredefined)
         self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
         self.MainVerticalLayout.addLayout(self.HorizontalLayoutPath)
-        self.MainVerticalLayout.addWidget(self.camera_image_label)
+        # self.MainVerticalLayout.addWidget(self.camera_image_label)
+        self.MainVerticalLayout.addWidget(self.canvas)
 
 
     def SetPathButtons(self):

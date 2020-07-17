@@ -91,9 +91,8 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                             print("{req,'MCU8',get_state}. failed")
                             local_reply = ""
                             pass
-#        self.start_timer()
 
-    def run(self):
+    def start(self):
         """Every self.timing [ms] checking connection with server and trying to get positions"""
         if self.init_check:
             self.timing = 1000
@@ -165,7 +164,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                     self.wait_reply = ""
                     loop_flag = False
             self.reply = self.send_reply + self.wait_reply
-            # print(self.reply)
+            print(self.reply)
         except Exception as e:
             logging.exception(e)
             self.reply = ""

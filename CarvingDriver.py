@@ -110,7 +110,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
     def get_position(self):
         """ Get axis positions from MCU8 """
         actual_positions = self.send_command("{req,'MCU8',get_position}.\r\n")
-#        actual_positions = "{'MCU8',{ok,[{axis_pos,0,8.000244140625},{axis_pos,1,-7.999755859375},{axis_pos,2,202.00006103515625},{axis_pos,3,-130.00079013677276},{axis_pos,4,0.0},{axis_pos,5,0.0}]}}"
+        # actual_positions = "{'MCU8',{ok,[{axis_pos,0,8.000244140625},{axis_pos,1,-7.999755859375},{axis_pos,2,202.00006103515625},{axis_pos,3,-130.00079013677276},{axis_pos,4,0.0},{axis_pos,5,0.0}]}}"
         self.actual_position_signal.emit(actual_positions)
 
     @property

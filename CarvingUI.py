@@ -19,13 +19,13 @@ from PyQt5.QtCore import QThreadPool, QTimer
 import logging
 import gc
 
-
 global god_mode_flag
 
 god_mode_flag = False
 
 
 def are_you_sure_decorator(func):
+    """Are you sure confirmation window is not shown only if god_mode_flag is True"""
     def wrapper(self, *args):
         if not god_mode_flag:
             button_reply = QMessageBox.question(self, 'PyQt5 message', "ARE YOU SURE???",
@@ -44,7 +44,6 @@ class CarvingControlApp(Ui_MainWindow):
     global god_mode_flag
 
     def __init__(self, *args):
-        # super().__init__(self, *args, **kwargs)
         super(self.__class__, self).__init__(self, *args)
         self.threadpool = QThreadPool()
         self.initialize()
@@ -98,12 +97,10 @@ class CarvingControlApp(Ui_MainWindow):
         self.MyCarving.new_position_signal.connect(self.update_target_positions)
         self.MyCarving.start()  # start this separate thread to get positions
 
-        "Connect camera"
-        self.my_camera_object = CameraGrabber(self.subplot, self.canvas)
-        # Execute thread
+        "Connect camera and start in separate thread - provide self.imv object to update image in it"
+        self.my_camera_object = CameraGrabber(self.imv)
         self.threadpool.start(self.my_camera_object)
 
-        
     def toggle_god_mode(self, state):
         global god_mode_flag
         god_mode_flag = state
@@ -121,8 +118,6 @@ class CarvingControlApp(Ui_MainWindow):
             for axis_name in self.axes_names_tuple:
                 self.axes_objects_dict[axis_name][2].setStyleSheet("background-color:white;")
                 self.axes_objects_dict[axis_name][4].setStyleSheet("background-color:white;")
-
-    "Are you sure confirmation window is not shown only if god_mode_flag is True"
 
     @are_you_sure_decorator
     def move_axis_abs(self, axis_name):
@@ -192,8 +187,6 @@ class CarvingControlApp(Ui_MainWindow):
             pass
         # get the current axis position
         # move axis accordingly
-
-    "Are you sure confirmation window is not shown only if god_mode_flag is True"
 
     @are_you_sure_decorator
     def set_predefined_positions(self, position_name):

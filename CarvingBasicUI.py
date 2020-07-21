@@ -11,6 +11,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QAction
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+import pyqtgraph as pg
+from pypylon import pylon
+from pypylon import genicam
 
 
 class Ui_MainWindow(QMainWindow):
@@ -88,9 +91,12 @@ class Ui_MainWindow(QMainWindow):
         # self.camera_image_label.setGeometry(QtCore.QRect(0, 0, self.w, 200))
         # self.camera_image_label.setText("HERE WILL BE IMAGE FROM CAMERA")
         
-        self.figure = Figure(figsize=(10, 8),facecolor=None, edgecolor=None)
-        self.canvas = FigureCanvasQTAgg(self.figure)
-        self.subplot = self.figure.subplots()
+        # self.figure = Figure(figsize=(10, 8),facecolor=None, edgecolor=None)
+        # self.canvas = FigureCanvasQTAgg(self.figure)
+        # self.subplot = self.figure.subplots()
+
+        self.imv = pg.ImageView()
+        self.imv.show()
         
 
         """Combine all layouts"""
@@ -99,7 +105,8 @@ class Ui_MainWindow(QMainWindow):
         self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
         self.MainVerticalLayout.addLayout(self.HorizontalLayoutPath)
         # self.MainVerticalLayout.addWidget(self.camera_image_label)
-        self.MainVerticalLayout.addWidget(self.canvas)
+        # self.MainVerticalLayout.addWidget(self.canvas)
+        self.MainVerticalLayout.addWidget(self.imv)
 
 
     def SetPathButtons(self):

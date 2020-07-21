@@ -56,6 +56,8 @@ class CameraGrabber(QRunnable):
                     factor = 4
                     small_image = numpy_image.reshape((grabResult.Height // factor, factor,
                                                        grabResult.Width// factor, factor, 3)).max(3).max(1)
+                    # small_image = numpy_image.reshape((grabResult.Height // factor, factor,
+                    #                                    grabResult.Width// factor, factor, 3)).mean(3).mean(1)
                     self.imageWindow.setImage(small_image)
                 else:
                     print("Error: ", grabResult.ErrorCode, grabResult.ErrorDescription)

@@ -20,8 +20,8 @@ class Ui_MainWindow(QMainWindow):
         self.setGeometry(300, 300, self.w, self.h)
         self.my_menu_bar = self.menuBar()
         self.options_menu = self.my_menu_bar.addMenu('Options')
-        # self.statusbar = self.statusBar()
-        # self.statusbar.showMessage('Ready')
+        self.statusbar = self.statusBar()
+        self.statusbar.showMessage('Ready')
 
         self.toggle_mode_action = QAction('God Mode', self, checkable=True)
         self.toggle_mode_action.setStatusTip('Enable God Mode')
@@ -83,14 +83,17 @@ class Ui_MainWindow(QMainWindow):
             self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]].setText(self.path_buttons_names_tuple[i])
 
         "Add label to show image from camera on it"
-        self.imv = pg.ImageView()
+        self.graphics_view = pg.GraphicsLayoutWidget()
+        self.p1 = self.graphics_view.addViewBox()
+        self.imv = pg.ImageItem()
+        self.p1.addItem(self.imv)
 
         """Combine all layouts"""
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutXYZ)
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutPredefined)
         self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
         self.MainVerticalLayout.addLayout(self.HorizontalLayoutPath)
-        self.MainVerticalLayout.addWidget(self.imv)
+        self.MainVerticalLayout.addWidget(self.graphics_view)
 
 
     def SetPathButtons(self):

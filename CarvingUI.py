@@ -9,15 +9,17 @@ UI to control SPECS Carving manipulator
 """
 from __future__ import unicode_literals
 
-from PyQt5.QtGui import QPixmap
+import time
+
 from PyQt5.QtWidgets import QWidget, QMessageBox, QMainWindow
-from CarvingDriver import CarvingControlDriver
-from CarvingBasicUI import Ui_MainWindow
-from CameraClass import CameraGrabber
-# from camera_class_test import CameraGrabber
 from PyQt5.QtCore import QThreadPool, QTimer
 import logging
 import gc
+from CarvingDriver import CarvingControlDriver
+from CarvingBasicUI import Ui_MainWindow
+from CameraClass import CameraGrabber
+from ExternalServerCarving import ExternalServer
+
 
 global god_mode_flag
 
@@ -26,6 +28,7 @@ god_mode_flag = False
 
 def are_you_sure_decorator(func):
     """Are you sure confirmation window is not shown only if god_mode_flag is True"""
+
     def wrapper(self, *args):
         if not god_mode_flag:
             button_reply = QMessageBox.question(self, 'PyQt5 message', "ARE YOU SURE???",
@@ -38,7 +41,6 @@ def are_you_sure_decorator(func):
 
     return wrapper
 
-
 class CarvingControlApp(Ui_MainWindow):
     # class CarvingControlApp(QWidget, Ui_MainWindow):
     global god_mode_flag
@@ -46,14 +48,16 @@ class CarvingControlApp(Ui_MainWindow):
     def __init__(self, *args):
         super(self.__class__, self).__init__(self, *args)
         self.threadpool = QThreadPool()
-        self.initialize()
         self.start_flag = True  # flag to update abs move axis lineedits at first start of the GUI
         self.shift_value = 0.0  # default shift value for axes
+        self.initialize()
 
     def initialize(self):
-
+        """Initialize all necessary parts"""
         """ Make a separate thread to monitor/control Carving """
         self.MyCarving = CarvingControlDriver("localhost", 40002)
+        """Start external server to monitor incoming commands from other programs"""
+        self.MyExternalServer = ExternalServer()
 
         """     Imported from CarvingBasicUI:
                 self.axes_names_tuple = (" X ", " Y ", " Z ", "Pol", "Azi", "Tilt" )
@@ -63,7 +67,6 @@ class CarvingControlApp(Ui_MainWindow):
                                                  3:QPushButtonObject,4:QLineEditObject, 5:QPushButtonObject}...}
                 self.predefined_buttons_names_tuple = (" ARPES ", " SCREW ", " EXCH ", " FREE ", " STOP ")
                 self.predefined_buttons_objects_dict = {" ARPES ":QPushButtonObject," SCREW ":QPushButtonObject},..."""
-
         self.predefined_positions_dict = {self.predefined_buttons_names_tuple[0]: (0.0, 0.0, 0.0, 0.0, 90.0, 0.0),
                                           self.predefined_buttons_names_tuple[1]: (0.0, 0.0, 215.0, -45.0, 0.0, 0.0),
                                           self.predefined_buttons_names_tuple[2]: (0.0, 0.0, 202.0, -130.0, 0.0, -17.0),
@@ -93,13 +96,59 @@ class CarvingControlApp(Ui_MainWindow):
         self.toggle_mode_action.triggered.connect(self.toggle_god_mode)
         self.toggle_god_mode(False)
 
+        """Connect carving signals"""
         self.MyCarving.actual_position_signal.connect(self.update_positions)
         self.MyCarving.new_position_signal.connect(self.update_target_positions)
+        self.MyCarving.actual_status_signal.connect(self.update_status)
         self.MyCarving.start()  # start this separate thread to get positions
+
+        """Connect server signals"""
+        self.MyExternalServer.signals.incoming_command_signal.connect(self.check_incoming_command)
+        self.threadpool.start(self.MyExternalServer)
 
         "Connect camera and start in separate thread - provide self.imv object to update image in it"
         self.my_camera_object = CameraGrabber(self.imv)
         self.threadpool.start(self.my_camera_object)
+
+    def update_status(self, actual_status_signal):
+        if "idle" in actual_status_signal:
+            self.statusbar.showMessage("IDLE")
+            self.statusbar.setStyleSheet("background-color:lightgreen;")
+        elif "busy" in actual_status_signal:
+            self.statusbar.showMessage("BUSY")
+            self.statusbar.setStyleSheet("background-color:red;")
+        else:
+            self.statusbar.showMessage("UNCLEAR")
+            self.statusbar.setStyleSheet("background-color:gray;")
+
+    def check_incoming_command(self, incoming_command):
+        "check what we receive from server which listens to ARPES GUI and move manipulator"
+        self.incoming_command = [float(i) for i in incoming_command.split(',')]
+        print("received in the main thread: ", self.incoming_command)
+        "construct new position vector but check before the backlash settings:if on move first to compensate backlash"
+        try:
+            if self.backlash_radiobutton.isChecked():
+                "Make a backlash position which is 0.5 below the target"
+                backlash_position = self.incoming_command
+                for new_pos in self.incoming_command:
+                    if new_pos < self.axes_positions[self.incoming_command.index(new_pos)]:
+                        backlash_position[self.incoming_command.index(new_pos)] = new_pos - 0.5
+                self.MyCarving.set_position(backlash_position)
+            "check if we need to move every axis with 0.001 precision, otherwise put None"
+            for new_pos in self.incoming_command:
+                if (new_pos - self.axes_positions[self.incoming_command.index(new_pos)])<0.001:
+                    self.incoming_command[self.incoming_command.index(new_pos)] = None
+            "finally move the manipulator to the measurement position"
+            self.MyCarving.set_position(self.incoming_command)
+            "wait until carving finishes moving"
+            while self.statusbar.currentMessage() == ("BUSY"):
+                time.sleep(0.5)
+            "send message that carving has finished moving"
+            self.MyExternalServer.command_finished()
+
+        except Exception as e:
+            logging.exception(e)
+            pass
 
     def toggle_god_mode(self, state):
         global god_mode_flag
@@ -129,6 +178,7 @@ class CarvingControlApp(Ui_MainWindow):
             self.axes_objects_dict[axis_name][2].setText(
                 self.axes_objects_dict[axis_name][2].text().replace(",", "."))
         "construct new position vector but check before the backlash settings:if on move first to compensate backlash"
+        "self.axes_positions comes from update position function"
         try:
             if self.backlash_radiobutton.isChecked():
                 if float(self.axes_objects_dict[axis_name][2].text()) < self.axes_positions[
@@ -193,7 +243,7 @@ class CarvingControlApp(Ui_MainWindow):
         self.MyCarving.set_position(self.predefined_positions_dict[position_name])
 
     def update_positions(self, reply):
-        """ Update manipulator positions once the new_position_signal signal recieved from MyCarving"""
+        """ Update manipulator positions once the new_position_signal signal received from MyCarving"""
         self.reply = reply
         if "ok" in self.reply:
             # print(self.reply)

@@ -50,6 +50,7 @@ class CarvingControlApp(Ui_MainWindow):
         self.threadpool = QThreadPool()
         self.start_flag = True  # flag to update abs move axis lineedits at first start of the GUI
         self.shift_value = 0.0  # default shift value for axes
+        self.status_indicator = "IDLE"
         self.initialize()
 
     def initialize(self):
@@ -108,14 +109,16 @@ class CarvingControlApp(Ui_MainWindow):
 
         "Connect camera and start in separate thread - provide self.imv object to update image in it"
         self.my_camera_object = CameraGrabber(self.imv)
-        self.threadpool.start(self.my_camera_object)
+        # self.threadpool.start(self.my_camera_object)
 
     def update_status(self, actual_status_signal):
         if "idle" in actual_status_signal:
-            self.statusbar.showMessage("IDLE")
+            self.status_indicator = "IDLE"
+            self.statusbar.showMessage(self.status_indicator)
             self.statusbar.setStyleSheet("background-color:lightgreen;")
         elif "busy" in actual_status_signal:
-            self.statusbar.showMessage("BUSY")
+            self.status_indicator = "BUSY"
+            self.statusbar.showMessage(self.status_indicator)
             self.statusbar.setStyleSheet("background-color:red;")
         else:
             self.statusbar.showMessage("UNCLEAR")
@@ -124,25 +127,33 @@ class CarvingControlApp(Ui_MainWindow):
     def check_incoming_command(self, incoming_command):
         "check what we receive from server which listens to ARPES GUI and move manipulator"
         self.incoming_command = [float(i) for i in incoming_command.split(',')]
-        print("received in the main thread: ", self.incoming_command)
+        print("received in the external server thread: ", self.incoming_command)
         "construct new position vector but check before the backlash settings:if on move first to compensate backlash"
         try:
             if self.backlash_radiobutton.isChecked():
                 "Make a backlash position which is 0.5 below the target"
-                backlash_position = self.incoming_command
-                for new_pos in self.incoming_command:
-                    if new_pos < self.axes_positions[self.incoming_command.index(new_pos)]:
-                        backlash_position[self.incoming_command.index(new_pos)] = new_pos - 0.5
+                print ("making backlash")
+                backlash_position = self.incoming_command.copy()
+                for i in range(len(self.incoming_command)):
+                    if self.incoming_command[i] < self.axes_positions[i]:
+                        backlash_position[i] = self.incoming_command[i] - 0.5
+                print ("moving carving to backlash position ",backlash_position)
                 self.MyCarving.set_position(backlash_position)
-            "check if we need to move every axis with 0.001 precision, otherwise put None"
-            for new_pos in self.incoming_command:
-                if (new_pos - self.axes_positions[self.incoming_command.index(new_pos)])<0.001:
-                    self.incoming_command[self.incoming_command.index(new_pos)] = None
+                time.sleep(0.05)
+                while self.status_indicator == "BUSY":
+                    time.sleep(0.5)
+                    pass
+            "check if we need to move every axis within 0.001 precision, otherwise put None"
+            for i in range(len(self.incoming_command)):
+                if abs(self.incoming_command[i] - self.axes_positions[i])<0.001:
+                    self.incoming_command[i] = None
             "finally move the manipulator to the measurement position"
+            print ("moving carving to measurement position ",self.incoming_command)
             self.MyCarving.set_position(self.incoming_command)
             "wait until carving finishes moving"
-            while self.statusbar.currentMessage() == ("BUSY"):
+            while self.status_indicator == "BUSY":
                 time.sleep(0.5)
+                pass
             "send message that carving has finished moving"
             self.MyExternalServer.command_finished()
 

@@ -160,17 +160,17 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
         """ Ask server and receive reply """
         try:
             self.message = command
-            print('attempt to send: ', self.message)
+            # print('attempt to send: ', self.message)
             self.mySocket.setblocking(0)
 
             self.mySocket.send(self.message.encode())
-            print('message send')
+            # print('message send')
             timeout = 2
             ready = select.select([self.mySocket], [], [], timeout)
             if ready[0]:
                 self.send_reply = self.mySocket.recv(200).decode()
             else:
-                print("no send reply from server")
+                # print("no send reply from server")
                 self.send_reply = ""
             loop_flag = True
             while loop_flag:
@@ -179,11 +179,11 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                 if ready[0]:
                     self.wait_reply = self.mySocket.recv(1000).decode()
                 else:
-                    print("no wait reply from server")
+                    # print("no wait reply from server")
                     self.wait_reply = ""
                     loop_flag = False
             self.reply = self.send_reply + self.wait_reply
-            print(self.reply)
+            # print(self.reply)
         except Exception as e:
             logging.exception(e)
             self.reply = ""

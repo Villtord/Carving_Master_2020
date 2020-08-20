@@ -16,7 +16,8 @@ class Ui_MainWindow(QMainWindow):
     def __init__(self, *args):
         super().__init__()
         self.w = 300
-        self.h = 800
+        # self.h = 800
+        self.h = 350
         self.setGeometry(300, 300, self.w, self.h)
         self.my_menu_bar = self.menuBar()
         self.options_menu = self.my_menu_bar.addMenu('Options')
@@ -76,24 +77,24 @@ class Ui_MainWindow(QMainWindow):
         self.HorizontalLayoutPath.addWidget(self.backlash_radiobutton)
 
         """Path buttons horizontal layout"""
-        self.path_buttons_names_tuple = (" Add PATH ", " Edit PATH ", " Clear PATH ", " Generate PATH ")
+        self.path_buttons_names_tuple = (" Add PATH ", " Edit PATH ", " Clear PATH ", " Generate PATH ", "CAMERA")
         self.path_buttons_objects_dict = {}
         for i in range(len(self.path_buttons_names_tuple)):
             self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]]=self.SetPathButtons()
             self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]].setText(self.path_buttons_names_tuple[i])
 
         "Add label to show image from camera on it"
-        self.graphics_view = pg.GraphicsLayoutWidget()
-        self.p1 = self.graphics_view.addViewBox()
-        self.imv = pg.ImageItem()
-        self.p1.addItem(self.imv)
+        # self.graphics_view = pg.GraphicsLayoutWidget()
+        # self.p1 = self.graphics_view.addViewBox()
+        # self.imv = pg.ImageItem()
+        # self.p1.addItem(self.imv)
 
         """Combine all layouts"""
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutXYZ)
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutPredefined)
         self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
         self.MainVerticalLayout.addLayout(self.HorizontalLayoutPath)
-        self.MainVerticalLayout.addWidget(self.graphics_view)
+        # self.MainVerticalLayout.addWidget(self.graphics_view)
 
 
     def SetPathButtons(self):

@@ -12,7 +12,7 @@ from __future__ import unicode_literals
 import time
 
 from PyQt5.QtWidgets import QWidget, QMessageBox, QMainWindow
-from PyQt5.QtCore import QThreadPool, QTimer
+from PyQt5.QtCore import QThreadPool, QTimer, QProcess
 import logging
 import gc
 from CarvingDriver import CarvingControlDriver
@@ -51,6 +51,7 @@ class CarvingControlApp(Ui_MainWindow):
         self.start_flag = True  # flag to update abs move axis lineedits at first start of the GUI
         self.shift_value = 0.0  # default shift value for axes
         self.status_indicator = "IDLE"
+        self.p = QProcess()  # Here we will start our camera
         self.initialize()
 
     def initialize(self):
@@ -108,9 +109,21 @@ class CarvingControlApp(Ui_MainWindow):
         self.threadpool.start(self.MyExternalServer)
 
         "Connect camera and start in separate thread - provide self.imv object to update image in it"
-        self.my_camera_object = CameraGrabber(self.imv)
+        self.p.finished.connect(self.camera_cleanup)
+        self.path_buttons_objects_dict["CAMERA"].clicked.connect(self.start_camera)
+        # self.my_camera_object = CameraGrabber(self.imv)
         # self.threadpool.start(self.my_camera_object)
-
+    
+    def camera_cleanup(self):
+        self.p = None
+    
+    def start_camera(self):
+        if not self.p:
+            self.p = QProcess()
+            self.p.finished.connect(self.camera_cleanup)
+            
+        self.p.start("python CameraImageGUI.py")
+        
     def update_status(self, actual_status_signal):
         if "idle" in actual_status_signal:
             self.status_indicator = "IDLE"
@@ -164,20 +177,21 @@ class CarvingControlApp(Ui_MainWindow):
     def toggle_god_mode(self, state):
         global god_mode_flag
         god_mode_flag = state
+        colors = ("blue","green","yellow","orange","red")
         if god_mode_flag:
             self.layoutWidget.setStyleSheet("background-color:pink;")
-            self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].setStyleSheet("background"
-                                                                                                       "-color:green;")
-            for axis_name in self.axes_names_tuple:
-                self.axes_objects_dict[axis_name][2].setStyleSheet("background-color:white;")
-                self.axes_objects_dict[axis_name][4].setStyleSheet("background-color:white;")
         else:
             self.layoutWidget.setStyleSheet("background-color:grey;")
-            self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].setStyleSheet(
-                "background-color:red;")
-            for axis_name in self.axes_names_tuple:
-                self.axes_objects_dict[axis_name][2].setStyleSheet("background-color:white;")
-                self.axes_objects_dict[axis_name][4].setStyleSheet("background-color:white;")
+        n=0
+        for button in self.predefined_buttons_names_tuple:
+            self.predefined_buttons_objects_dict[button].setStyleSheet(f"background-color:{colors[n]};")
+            n+=1
+        # self.predefined_buttons_objects_dict[self.predefined_buttons_names_tuple[4]].setStyleSheet("background"
+        #                                                                                            "-color:red;")
+        for axis_name in self.axes_names_tuple:
+            self.axes_objects_dict[axis_name][2].setStyleSheet("background-color:white;")
+            self.axes_objects_dict[axis_name][4].setStyleSheet("background-color:white;")
+
 
     @are_you_sure_decorator
     def move_axis_abs(self, axis_name):

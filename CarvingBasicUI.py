@@ -9,18 +9,20 @@ Basic UI to control SPECS Carving manipulator
 """
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QMainWindow, QAction
+import pyqtgraph as pg
 
 
 class Ui_MainWindow(QMainWindow):
     def __init__(self, *args):
         super().__init__()
         self.w = 300
-        self.h = 200
+        # self.h = 800
+        self.h = 350
         self.setGeometry(300, 300, self.w, self.h)
         self.my_menu_bar = self.menuBar()
         self.options_menu = self.my_menu_bar.addMenu('Options')
-        # self.statusbar = self.statusBar()
-        # self.statusbar.showMessage('Ready')
+        self.statusbar = self.statusBar()
+        self.statusbar.showMessage('Ready')
 
         self.toggle_mode_action = QAction('God Mode', self, checkable=True)
         self.toggle_mode_action.setStatusTip('Enable God Mode')
@@ -63,7 +65,7 @@ class Ui_MainWindow(QMainWindow):
 
 
         self.HorizontalLayoutPath = QtWidgets.QHBoxLayout()
-        self.HorizontalLayoutPath.setContentsMargins(0, 0, 0, 0)
+        # self.HorizontalLayoutPath.setContentsMargins(0, 0, 0, 0)
         """Set up the backlash RadioButton"""
         self.backlash_radiobutton = QtWidgets.QRadioButton("BACKLASH", self.layoutWidget)
         self.StyleSheetOn = "QRadioButton::indicator {width: 15px; height: 15px; border-radius: 7px;} " \
@@ -75,24 +77,30 @@ class Ui_MainWindow(QMainWindow):
         self.HorizontalLayoutPath.addWidget(self.backlash_radiobutton)
 
         """Path buttons horizontal layout"""
-        self.path_buttons_names_tuple = (" Add PATH ", " Edit PATH ", " Clear PATH ", " Generate PATH ")
+        self.path_buttons_names_tuple = (" Add PATH ", " Edit PATH ", " Clear PATH ", " Generate PATH ", "CAMERA")
         self.path_buttons_objects_dict = {}
         for i in range(len(self.path_buttons_names_tuple)):
             self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]]=self.SetPathButtons()
             self.path_buttons_objects_dict[self.path_buttons_names_tuple[i]].setText(self.path_buttons_names_tuple[i])
+
+        "Add label to show image from camera on it"
+        # self.graphics_view = pg.GraphicsLayoutWidget()
+        # self.p1 = self.graphics_view.addViewBox()
+        # self.imv = pg.ImageItem()
+        # self.p1.addItem(self.imv)
 
         """Combine all layouts"""
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutXYZ)
         self.MainHorizontalLayout.addLayout(self.VerticalLayoutPredefined)
         self.MainVerticalLayout.addLayout(self.MainHorizontalLayout)
         self.MainVerticalLayout.addLayout(self.HorizontalLayoutPath)
-
+        # self.MainVerticalLayout.addWidget(self.graphics_view)
 
 
     def SetPathButtons(self):
         "PushButton to work with path positions and generate path"
         self.pushButton = QtWidgets.QPushButton(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         self.pushButton.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
@@ -107,9 +115,10 @@ class Ui_MainWindow(QMainWindow):
     def SetPredefinedButtons(self):
         "PushButton to move the axis to a predefined position"
         self.pushButton = QtWidgets.QPushButton(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         self.pushButton.setSizePolicy(sizePolicy)
+        self.pushButton.setFixedHeight(50)
         font = QtGui.QFont()
         font.setBold(False)
         font.setWeight(50)
@@ -126,7 +135,7 @@ class Ui_MainWindow(QMainWindow):
 
         "Label showing name of the axis"
         self.Label = QtWidgets.QLabel(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         # sizePolicy.setHeightForWidth(self.Label.sizePolicy().hasHeightForWidth())
@@ -154,7 +163,7 @@ class Ui_MainWindow(QMainWindow):
 
         "LineEdit to enter the required position of the axis"
         self.LineEdit = QtWidgets.QLineEdit(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHeightForWidth(self.LineEdit.sizePolicy().hasHeightForWidth())
         self.LineEdit.setSizePolicy(sizePolicy)
         self.LineEdit.setFont(font)
@@ -168,7 +177,7 @@ class Ui_MainWindow(QMainWindow):
 
         "PushButton to move the axis by delta to the lower values"
         self.pushButton = QtWidgets.QPushButton(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         self.pushButton.setSizePolicy(sizePolicy)
         font.setBold(False)
@@ -184,7 +193,7 @@ class Ui_MainWindow(QMainWindow):
 
         "LineEdit to enter the required position of delta to move the axis"
         self.LineEdit = QtWidgets.QLineEdit(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.LineEdit.sizePolicy().hasHeightForWidth())
@@ -192,13 +201,14 @@ class Ui_MainWindow(QMainWindow):
         font.setPointSize(16)
         self.LineEdit.setFont(font)
         self.LineEdit.setAlignment(QtCore.Qt.AlignCenter)
+        self.LineEdit.setText("0.10")
         self.HorizontalLayout.addWidget(self.LineEdit)
         self.SingleAxisControlDict[4]=self.LineEdit
         self.HorizontalLayout.addStretch()
 
         "PushButton to move the axis by delta to the lower values"
         self.pushButton = QtWidgets.QPushButton(self.layoutWidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHeightForWidth(self.pushButton.sizePolicy().hasHeightForWidth())
         self.pushButton.setSizePolicy(sizePolicy)
         font.setBold(False)

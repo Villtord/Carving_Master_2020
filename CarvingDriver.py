@@ -15,7 +15,7 @@ Timeout and byte size parameters taken from Labview example gateway in SPECS ins
 """
 import PyQt5.QtCore
 import PyQt5.QtWidgets
-import sys
+import time
 import socket
 import select
 import logging
@@ -24,6 +24,7 @@ import logging
 class CarvingControlDriver(PyQt5.QtCore.QThread):
     actual_position_signal = PyQt5.QtCore.pyqtSignal('QString')
     new_position_signal = PyQt5.QtCore.pyqtSignal('PyQt_PyObject')
+    actual_status_signal = PyQt5.QtCore.pyqtSignal('QString')
 
     def __init__(self, host, port, **kwargs):
         """Initialize TCP connection and get the control ready
@@ -34,6 +35,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
         self.connection_flag = False
         self.host = host
         self.port = port
+        self.init_check = False
         print('establishing connection with host, port', self.host, self.port)
         self.mySocket = socket.socket()
         """Initial socket connection - the reply is expected to be {tcp_gateway,{ok,"4.67.1-r91102","1.0"}}."""
@@ -84,37 +86,55 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                     if "ok" in local_reply:
                         try:
                             local_reply = self.send_command("{req,'MCU8',get_state}.\r\n")
-                            self.start_timer()
+                            self.init_check = True
                         except Exception as e:
                             logging.exception(e)
                             print("{req,'MCU8',get_state}. failed")
                             local_reply = ""
                             pass
-#        self.start_timer()
+        # self.init_check = True # TEST MODE, REMOVE LATER!!!
 
-    def start_timer(self):
+    def start(self):
         """Every self.timing [ms] checking connection with server and trying to get positions"""
-        self.timing = 1000
-        self.timer_x = PyQt5.QtCore.QTimer(self)
-        self.timer_x.timeout.connect(self.get_position)
-        self.timer_x.start(self.timing)
+        if self.init_check:
+            self.timing = 1000
+            self.timer_x = PyQt5.QtCore.QTimer(self)
+            self.timer_x.timeout.connect(self.get_position)
+            self.timer_x.start(self.timing)
+            "Start monitoring the state of the carving"
+            time.sleep(0.2)
+            self.start_busy_monitor()
+        else:
+            print("error while initial check of the manipulator")
+
+    def start_busy_monitor(self):
+        "Check busy/idle status of the manipulator"
+        if self.init_check:
+            self.timing2 = 500
+            self.timer_busy_monitor = PyQt5.QtCore.QTimer(self)
+            self.timer_busy_monitor.timeout.connect(self.get_state)
+            self.timer_busy_monitor.start(self.timing2)
+        else:
+            print("error while initial check of the manipulator")
 
     def stop_manipulator(self):
         self.timer_x.stop()
+        self.timer_busy_monitor.stop()
         self.send_command("{req, 'MCU8', stop}.\r\n")
         self.timer_x.start(self.timing)
+        self.self.timer_busy_monitor.start(self.timing2)
 
     def get_position(self):
         """ Get axis positions from MCU8 """
         actual_positions = self.send_command("{req,'MCU8',get_position}.\r\n")
-#        actual_positions = "{'MCU8',{ok,[{axis_pos,0,8.000244140625},{axis_pos,1,-7.999755859375},{axis_pos,2,202.00006103515625},{axis_pos,3,-130.00079013677276},{axis_pos,4,0.0},{axis_pos,5,0.0}]}}"
+        # actual_positions = "{'MCU8',{ok,[{axis_pos,0,8.000244140625},{axis_pos,1,-7.999755859375},{axis_pos,2,202.00006103515625},{axis_pos,3,-130.00079013677276},{axis_pos,4,0.0},{axis_pos,5,0.0}]}}"
         self.actual_position_signal.emit(actual_positions)
 
-    @property
     def get_state(self):
         """Get manipulator state: idle or busy"""
-        carving_state = [False if "idle" in self.send_command("{req,'MCU8',get_state}.\r\n") else True]
-        return carving_state
+        carving_state = self.send_command("{req,'MCU8',get_state}.\r\n")
+        # carving_state = "{'MCU8',{ok,idle}}"
+        self.actual_status_signal.emit(carving_state)
 
     def set_position(self, new_position):
         """
@@ -122,6 +142,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
         Position must be a list of 6 values (float,None) separated by , . NONE value means no command to move this axis.
         """
         self.timer_x.stop()
+        self.timer_busy_monitor.stop()
         self.new_position = new_position
         """emit predefined positions to update target lineedits"""
         if None not in self.new_position:
@@ -133,22 +154,23 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
         final_command = new_command[:-1] + "]}}.\r\n"
         self.send_command(final_command)
         self.timer_x.start(self.timing)
+        self.timer_busy_monitor.start(self.timing2)
 
     def send_command(self, command):
         """ Ask server and receive reply """
         try:
             self.message = command
-            print('attempt to send: ', self.message)
+            # print('attempt to send: ', self.message)
             self.mySocket.setblocking(0)
 
             self.mySocket.send(self.message.encode())
-            print('message send')
+            # print('message send')
             timeout = 2
             ready = select.select([self.mySocket], [], [], timeout)
             if ready[0]:
                 self.send_reply = self.mySocket.recv(200).decode()
             else:
-                print("no send reply from server")
+                # print("no send reply from server")
                 self.send_reply = ""
             loop_flag = True
             while loop_flag:
@@ -157,7 +179,7 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
                 if ready[0]:
                     self.wait_reply = self.mySocket.recv(1000).decode()
                 else:
-                    print("no wait reply from server")
+                    # print("no wait reply from server")
                     self.wait_reply = ""
                     loop_flag = False
             self.reply = self.send_reply + self.wait_reply
@@ -178,3 +200,5 @@ class CarvingControlDriver(PyQt5.QtCore.QThread):
             pass
         self.timer_x.stop()
         self.timer_x.deleteLater()
+        self.timer_busy_monitor.stop()
+        self.timer_busy_monitor.deleteLater()
